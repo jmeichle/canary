@@ -11,6 +11,7 @@ import (
 	"github.com/canaryio/canary/pkg/sampler"
 	"github.com/canaryio/canary/pkg/sensor"
 	"github.com/canaryio/canary/pkg/stdoutpublisher"
+	"github.com/canaryio/canary/pkg/restpublisher"
 )
 
 type config struct {
@@ -55,6 +56,10 @@ func main() {
 		switch publisher {
 		case "stdout":
 			p := stdoutpublisher.New()
+			publishers = append(publishers, p)
+		case "rest":
+			p := restpublisher.New()
+			p.Setup()
 			publishers = append(publishers, p)
 		case "librato":
 			p, err := libratopublisher.NewFromEnv()
