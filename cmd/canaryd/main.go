@@ -46,6 +46,18 @@ func getConfig() (c config, err error) {
 	return
 }
 
+// This will not work for urls on unique intervals. we need a way to average it all out with maths
+func even_interval_split(intervalSeconds int, numTargets int) []float64 {
+	var intervalMilliseconds = float64(intervalSeconds*1000)
+	var arr = make([]float64, numTargets) // Create an float64 slice of numTargets long.
+									      // This will be an array of start delay times that evenly add up to interval (ms)
+	var chunkSize = float64(intervalMilliseconds/float64(numTargets))
+	for i := 0.0; i < intervalMilliseconds; i = i + chunkSize {
+		arr[int((i/chunkSize))] = i
+	}
+	return arr
+}
+
 func main() {
 	conf, err := getConfig()
 	if err != nil {
@@ -79,8 +91,10 @@ func main() {
 		}
 	}
 
+	var delaySlice = even_interval_split(conf.DefaultSampleInterval, len(manifest.Targets))
+
 	// spinup a sensor for each target
-	for _, target := range manifest.Targets {
+	for index, target := range manifest.Targets {
 		// Determine whether to use target.Interval or conf.DefaultSampleInterval
 		var interval int;
 		// Targets that lack an interval value in JSON will have their value set to zero. in this case,
@@ -95,7 +109,7 @@ func main() {
 			C:       c,
 			Sampler: sampler.New(),
 		}
-		go sensor.Start(interval)
+		go sensor.Start(interval, delaySlice[index])
 	}
 
 	// publish each incoming measurement
