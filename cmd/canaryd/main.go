@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"strconv"
 
 	"github.com/canaryio/canary"
 	"github.com/canaryio/canary/pkg/libratopublisher"
@@ -16,6 +17,7 @@ import (
 
 type config struct {
 	ManifestURL   string
+	DefaultSampleInterval int
 	PublisherList []string
 }
 
@@ -31,6 +33,16 @@ func getConfig() (c config, err error) {
 		list = "stdout"
 	}
 	c.PublisherList = strings.Split(list, ",")
+
+	interval := os.Getenv("DEFAULT_SAMPLE_INTERVAL")
+	// if the variable is unset, an empty string will be returned
+	if interval == "" {
+		interval = "1"
+	}
+	c.DefaultSampleInterval, err = strconv.Atoi(interval)
+	if err != nil {
+		err = fmt.Errorf("DEFAULT_SAMPLE_INTERVAL is not a valid integer")
+	}
 
 	return
 }
@@ -74,12 +86,21 @@ func main() {
 
 	// spinup a sensor for each target
 	for _, target := range manifest.Targets {
+		// Determine whether to use target.Interval or conf.DefaultSampleInterval
+		var interval int;
+		// Targets that lack an interval value in JSON will have their value set to zero. in this case,
+		// use the DefaultSampleInterval
+		if target.Interval == 0 {
+			interval = conf.DefaultSampleInterval
+		} else {
+			interval = target.Interval
+		}
 		sensor := sensor.Sensor{
 			Target:  target,
 			C:       c,
 			Sampler: sampler.New(),
 		}
-		go sensor.Start()
+		go sensor.Start(interval)
 	}
 
 	// publish each incoming measurement
