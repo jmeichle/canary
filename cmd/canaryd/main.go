@@ -17,6 +17,7 @@ import (
 type config struct {
 	ManifestURL   string
 	DefaultSampleInterval int
+	RampupSensors bool
 	PublisherList []string
 }
 
@@ -43,19 +44,15 @@ func getConfig() (c config, err error) {
 		err = fmt.Errorf("DEFAULT_SAMPLE_INTERVAL is not a valid integer")
 	}
 
-	return
-}
-
-// This will not work for urls on unique intervals. we need a way to average it all out with maths
-func even_interval_split(intervalSeconds int, numTargets int) []float64 {
-	var intervalMilliseconds = float64(intervalSeconds*1000)
-	var arr = make([]float64, numTargets) // Create an float64 slice of numTargets long.
-									      // This will be an array of start delay times that evenly add up to interval (ms)
-	var chunkSize = float64(intervalMilliseconds/float64(numTargets))
-	for i := 0.0; i < intervalMilliseconds; i = i + chunkSize {
-		arr[int((i/chunkSize))] = i
+	// Set RampupSensors if RAMPUP_SENSORS is set to 'yes'
+	rampUp := os.Getenv("RAMPUP_SENSORS")
+	if rampUp == "yes" {
+		c.RampupSensors = true
+	} else {
+		c.RampupSensors = false
 	}
-	return arr
+
+	return
 }
 
 func main() {
@@ -69,6 +66,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if conf.RampupSensors {
+		manifest.GenerateRampupDelays(conf.DefaultSampleInterval)
+	}
+ 
 	// output chan
 	c := make(chan sensor.Measurement)
 
@@ -91,7 +92,7 @@ func main() {
 		}
 	}
 
-	var delaySlice = even_interval_split(conf.DefaultSampleInterval, len(manifest.Targets))
+	// var delaySlice = even_interval_split(conf.DefaultSampleInterval, len(manifest.Targets))
 
 	// spinup a sensor for each target
 	for index, target := range manifest.Targets {
@@ -109,7 +110,7 @@ func main() {
 			C:       c,
 			Sampler: sampler.New(),
 		}
-		go sensor.Start(interval, delaySlice[index])
+		go sensor.Start(interval, manifest.StartDelays[index])
 	}
 
 	// publish each incoming measurement
