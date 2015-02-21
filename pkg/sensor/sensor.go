@@ -42,8 +42,10 @@ func (s *Sensor) Start(interval int, delay float64) {
 	// Delay for loop start offset. 
 	time.Sleep((time.Millisecond * time.Duration(delay)))
 	t := time.NewTicker((time.Second * time.Duration(interval)))
+
+	// Measure, then wait for ticker interval
 	s.C <- s.measure()
-	
+
 	for {
 		// The ticker will take some time to tick the first time. Push a measurement to run without waiting an interval first.
 		select {
