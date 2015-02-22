@@ -3,7 +3,6 @@ package canary
 import (
 	"log"
 	"os"
-	"fmt"
 	"os/signal"
 	"syscall"
 
@@ -45,13 +44,10 @@ func (c *Canary) SignalHandler() {
 	for s := range signalChan {
 		switch s {
 		case syscall.SIGINT:
-			fmt.Println("Received SIGINT. Stopping.")
 			os.Exit(0)
 		case syscall.SIGHUP:
-			fmt.Println("Received SIGHUP.")
 			c.ReloadChan<-true
 		}
-		fmt.Println("DONE WITH SIG HANDLER chan receive")
 	}
 }
 
@@ -63,21 +59,14 @@ func (c *Canary) reloader() {
 	for r := range c.ReloadChan {
 		if r {
 			for _, sensor := range c.Sensors {
-				fmt.Println(" Working on sensor: " + sensor.Target.URL)
 				sensor.Stop()
 			}
-
-			fmt.Println("Sensors should be stopped. Getting a new manifest")
-
 			// get an updated manifest.
 			manifest, err := manifest.GetManifest(c.Config.ManifestURL)
 			if err != nil {
 				log.Fatal(err)
 			}
 			c.Manifest = manifest
-
-			fmt.Println("Starting new sensors...")
-
 			// Start new sensors:
 			c.startSensors()
 		}
@@ -117,9 +106,10 @@ func (c *Canary) startSensors() {
 			interval = target.Interval
 		}
 		sensor := sensor.Sensor{
-			Target:  target,
-			C:       c.OutputChan,
-			Sampler: sampler.New(),
+			Target:   target,
+			C:        c.OutputChan,
+			Sampler:  sampler.New(),
+			StopChan: make(chan int),
 		}
 		c.Sensors = append(c.Sensors, sensor)
 
