@@ -19,7 +19,7 @@ type Sensor struct {
 	Target   sampler.Target
 	C        chan Measurement
 	Sampler  sampler.Sampler
-	stopChan chan int
+	StopChan chan int
 }
 
 // take a sample against a target.
@@ -35,10 +35,6 @@ func (s *Sensor) measure() Measurement {
 // Start is meant to be called within a goroutine, and fires up the main event loop.
 // interval is number of seconds. delay is number of ms.
 func (s *Sensor) Start(interval int, delay float64) {
-	if s.stopChan == nil {
-		s.stopChan = make(chan int)
-	}
-
 	// Delay for loop start offset.
 	time.Sleep((time.Millisecond * time.Duration(delay)))
 
@@ -50,7 +46,7 @@ func (s *Sensor) Start(interval int, delay float64) {
 
 	for {
 		select {
-		case <-s.stopChan:
+		case <- s.StopChan:
 			return
 		case <-t.C:
 			s.C <- s.measure()
@@ -60,5 +56,5 @@ func (s *Sensor) Start(interval int, delay float64) {
 
 // Stop halts the event loop.
 func (s *Sensor) Stop() {
-	close(s.stopChan)
+	s.StopChan <- 1
 }
