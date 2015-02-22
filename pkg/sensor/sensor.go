@@ -45,20 +45,20 @@ func (s *Sensor) Start(interval int, delay float64) {
 	time.Sleep((time.Millisecond * time.Duration(delay)))
 
 	// Start the ticker for this sensors interval
-	//t := time.NewTicker((time.Second * time.Duration(interval)))
+	t := time.NewTicker((time.Second * time.Duration(interval)))
 
 	// Measure, then wait for ticker interval
 	s.C <- s.measure()
 
 	for {
-		fmt.Println("yay for loop")
 		select {
-		case <-s.stopChan:
+		case v := <- s.stopChan:
+			fmt.Printf("%+v\n", v)
 			fmt.Println("We got a stopChan message in sensor: " + s.Target.URL)
 			return
-		// case <-t.C:
-		// 	fmt.Println("We got a ticker tick in sensor: " + s.Target.URL)
-		// 	s.C <- s.measure()
+		case <-t.C:
+			fmt.Println("We got a ticker tick in sensor: " + s.Target.URL)
+			s.C <- s.measure()
 		}
 	}
 }
