@@ -17,7 +17,9 @@ type Canary struct {
 	Config   Config
 	Manifest manifest.Manifest
 	OutputChan chan sensor.Measurement
+
 	Publishers []Publisher
+	Sensors []sensor.Sensor
 }
 
 // New returns a pointer to a new Publsher.
@@ -35,21 +37,36 @@ func (c *Canary) publishMeasurements() {
 }
 
 func (c *Canary) SignalHandler() {
+	fmt.Println("Within SignalHandler")
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT)
 	signal.Notify(signalChan, syscall.SIGHUP)
 	for s := range signalChan {
+		fmt.Println("We gots ourselves a signal")
 		switch s {
 		case syscall.SIGINT:
+			fmt.Println("Received SIGINT. Stopping.")
 			os.Exit(0)
 		case syscall.SIGHUP:
-			// Wouldn't this be nice?
+			fmt.Println("Received SIGHUP. Stopping.")
+			// // stop each sensor.
+			// for _, sensor := range c.Sensors {
+			// 	sensor.Stop()
+			// }
+			// // get an updated manifest.
+			// manifest, err := manifest.GetManifest(c.Config.ManifestURL)
+			// if err != nil {
+			// 	log.Fatal(err)
+			// }
+			// c.Manifest = manifest
+			// Start new sensors:
+
+			// c.startSensors()
 		}
 	}
 }
 
-func (c *Canary) Run() {
-	// spinup publishers
+func (c *Canary) createPublishers() {
 	for _, publisher := range c.Config.PublisherList {
 		switch publisher {
 		case "stdout":
@@ -65,6 +82,10 @@ func (c *Canary) Run() {
 			log.Printf("Unknown publisher: %s", publisher)
 		}
 	}
+}
+
+func (c *Canary) startSensors() {
+	c.Sensors = []sensor.Sensor{} // reset the slice
 
 	// spinup a sensor for each target
 	for index, target := range c.Manifest.Targets {
@@ -82,8 +103,17 @@ func (c *Canary) Run() {
 			C:       c.OutputChan,
 			Sampler: sampler.New(),
 		}
+		c.Sensors = append(c.Sensors, sensor)
+
 		go sensor.Start(interval, c.Manifest.StartDelays[index])
 	}
+}
 
+func (c *Canary) Run() {
+	// spinup publishers
+	c.createPublishers()
+	// create and start sensors
+	c.startSensors()
+	// start a go routine for measurement publishing.
 	go c.publishMeasurements()
 }

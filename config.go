@@ -6,4 +6,3 @@ type Config struct {
 	RampupSensors bool
 	PublisherList []string
 }
-

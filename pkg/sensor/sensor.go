@@ -60,5 +60,5 @@ func (s *Sensor) Start(interval int, delay float64) {
 
 // Stop halts the event loop.
 func (s *Sensor) Stop() {
-	close(s.stopChan)
+	s.stopChan<-1
 }
