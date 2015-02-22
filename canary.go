@@ -3,6 +3,7 @@ package canary
 import (
 	"log"
 	"os"
+	"fmt"
 	"os/signal"
 	"syscall"
 
@@ -20,6 +21,7 @@ type Canary struct {
 
 	Publishers []Publisher
 	Sensors []sensor.Sensor
+	ReloadChan chan bool
 }
 
 // New returns a pointer to a new Publsher.
@@ -37,31 +39,47 @@ func (c *Canary) publishMeasurements() {
 }
 
 func (c *Canary) SignalHandler() {
-	fmt.Println("Within SignalHandler")
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT)
 	signal.Notify(signalChan, syscall.SIGHUP)
 	for s := range signalChan {
-		fmt.Println("We gots ourselves a signal")
 		switch s {
 		case syscall.SIGINT:
 			fmt.Println("Received SIGINT. Stopping.")
 			os.Exit(0)
 		case syscall.SIGHUP:
-			fmt.Println("Received SIGHUP. Stopping.")
-			// // stop each sensor.
-			// for _, sensor := range c.Sensors {
-			// 	sensor.Stop()
-			// }
-			// // get an updated manifest.
-			// manifest, err := manifest.GetManifest(c.Config.ManifestURL)
-			// if err != nil {
-			// 	log.Fatal(err)
-			// }
-			// c.Manifest = manifest
-			// Start new sensors:
+			fmt.Println("Received SIGHUP.")
+			c.ReloadChan<-true
+		}
+		fmt.Println("DONE WITH SIG HANDLER chan receive")
+	}
+}
 
-			// c.startSensors()
+func (c *Canary) reloader() {
+	if c.ReloadChan == nil {
+		c.ReloadChan = make(chan bool)
+	}
+
+	for r := range c.ReloadChan {
+		if r {
+			for _, sensor := range c.Sensors {
+				fmt.Println(" Working on sensor: " + sensor.Target.URL)
+				sensor.Stop()
+			}
+
+			fmt.Println("Sensors should be stopped. Getting a new manifest")
+
+			// get an updated manifest.
+			manifest, err := manifest.GetManifest(c.Config.ManifestURL)
+			if err != nil {
+				log.Fatal(err)
+			}
+			c.Manifest = manifest
+
+			fmt.Println("Starting new sensors...")
+
+			// Start new sensors:
+			c.startSensors()
 		}
 	}
 }
@@ -114,6 +132,8 @@ func (c *Canary) Run() {
 	c.createPublishers()
 	// create and start sensors
 	c.startSensors()
+	// start a go routine for watching config reloads
+	go c.reloader()
 	// start a go routine for measurement publishing.
 	go c.publishMeasurements()
 }

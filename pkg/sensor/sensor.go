@@ -2,6 +2,7 @@ package sensor
 
 import (
 	"time"
+	"fmt"
 
 	"github.com/canaryio/canary/pkg/sampler"
 )
@@ -35,6 +36,7 @@ func (s *Sensor) measure() Measurement {
 // Start is meant to be called within a goroutine, and fires up the main event loop.
 // interval is number of seconds. delay is number of ms.
 func (s *Sensor) Start(interval int, delay float64) {
+	fmt.Println("Start of sensor.Start() for: " + s.Target.URL)
 	if s.stopChan == nil {
 		s.stopChan = make(chan int)
 	}
@@ -43,22 +45,27 @@ func (s *Sensor) Start(interval int, delay float64) {
 	time.Sleep((time.Millisecond * time.Duration(delay)))
 
 	// Start the ticker for this sensors interval
-	t := time.NewTicker((time.Second * time.Duration(interval)))
+	//t := time.NewTicker((time.Second * time.Duration(interval)))
 
 	// Measure, then wait for ticker interval
 	s.C <- s.measure()
 
 	for {
+		fmt.Println("yay for loop")
 		select {
 		case <-s.stopChan:
+			fmt.Println("We got a stopChan message in sensor: " + s.Target.URL)
 			return
-		case <-t.C:
-			s.C <- s.measure()
+		// case <-t.C:
+		// 	fmt.Println("We got a ticker tick in sensor: " + s.Target.URL)
+		// 	s.C <- s.measure()
 		}
 	}
 }
 
 // Stop halts the event loop.
 func (s *Sensor) Stop() {
-	s.stopChan<-1
+	fmt.Println("Within stop() for sensor: " + s.Target.URL)
+	s.stopChan <- 1
+	fmt.Println("yay")
 }
