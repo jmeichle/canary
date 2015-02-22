@@ -62,9 +62,13 @@ func (c *Canary) reloader() {
 	for r := range c.ReloadChan {
 		if r {
 			// stop all running sensors
-			for _, sensor := range c.Sensors {
+			for _,sensor := range c.Sensors {
 				sensor.Stop()
 			}
+			for _,sensor := range c.Sensors {
+				<- sensor.IsStopped
+			}
+
 			// get an updated manifest.
 			manifest, err := manifest.GetManifest(c.Config.ManifestURL)
 			if err != nil {
@@ -113,10 +117,11 @@ func (c *Canary) startSensors() {
 			interval = target.Interval
 		}
 		sensor := sensor.Sensor{
-			Target:   target,
-			C:        c.OutputChan,
-			Sampler:  sampler.New(),
-			StopChan: make(chan int),
+			Target:    target,
+			C:         c.OutputChan,
+			Sampler:   sampler.New(),
+			StopChan:  make(chan int, 1),
+			IsStopped: make(chan bool),
 		}
 		c.Sensors = append(c.Sensors, sensor)
 

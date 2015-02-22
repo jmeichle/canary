@@ -20,6 +20,7 @@ type Sensor struct {
 	C        chan Measurement
 	Sampler  sampler.Sampler
 	StopChan chan int
+	IsStopped chan bool
 }
 
 // take a sample against a target.
@@ -47,6 +48,7 @@ func (s *Sensor) Start(interval int, delay float64) {
 	for {
 		select {
 		case <- s.StopChan:
+			s.IsStopped <- true
 			return
 		case <-t.C:
 			s.C <- s.measure()
