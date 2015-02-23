@@ -22,10 +22,10 @@ type Sensor struct {
 	Target       sampler.Target
 	C            chan Measurement
 	Sampler      sampler.Sampler
+	StateCounter int
 	StopChan     chan int
 	IsStopped    chan bool
 	IsOK         bool
-	StateCounter int
 }
 
 // take a sample against a target.

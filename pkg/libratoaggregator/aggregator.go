@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/canaryio/canary/pkg/canaryversion"
 	"log"
 	"net/http"
 	"time"
-	"github.com/canaryio/canary/pkg/canaryversion"
 )
 
 type gauge struct {
