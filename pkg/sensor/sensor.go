@@ -3,17 +3,16 @@ package sensor
 import (
 	"time"
 
-	"fmt"
-	"strconv"
-
 	"github.com/canaryio/canary/pkg/sampler"
 )
 
 // Measurement reprents an aggregate of Target, Sample and error.
 type Measurement struct {
-	Target sampler.Target
-	Sample sampler.Sample
-	Error  error
+	Target     sampler.Target
+	Sample     sampler.Sample
+	IsOK       bool
+	StateCount int
+	Error      error
 }
 
 // Sensor is capable of repeatedly measuring a given Target
@@ -31,32 +30,24 @@ type Sensor struct {
 // take a sample against a target.
 func (s *Sensor) measure() Measurement {
 	sample, err := s.Sampler.Sample(s.Target)
-	measurement := Measurement{
+	m := Measurement{
 		Target: s.Target,
 		Sample: sample,
 		Error:  err,
 	}
-	fmt.Printf("measurement.Error: %+v\n", measurement.Error)
-	var hasError bool
-	if measurement.Error != nil {
-		hasError = true
-	} else {
-		hasError = false
-	}
-	// we have an error
-	if s.IsOK == hasError {
-		s.StateCounter++
-	} else {
-		s.IsOK = hasError
-		s.StateCounter = 1
-	}
 
-	if s.IsOK {
-		fmt.Println(s.Target.URL + " IsOK=true. Counter: " + strconv.Itoa(s.StateCounter))
-	} else {
-		fmt.Println(s.Target.URL + " IsOK=false. Counter: " + strconv.Itoa(s.StateCounter))
+	// Record the pass/fail for this measurement
+	m.IsOK = (m.Error == nil)
+
+	// Update the Sensors value for IsOK and counter for said state.
+	if s.IsOK != m.IsOK {
+		s.IsOK = m.IsOK
+		s.StateCounter = 0
 	}
-	return measurement
+	s.StateCounter++
+	m.StateCount = s.StateCounter
+
+	return m
 }
 
 // Start is meant to be called within a goroutine, and fires up the main event loop.
