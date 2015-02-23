@@ -1,8 +1,8 @@
 package canary
 
 type Config struct {
-	ManifestURL   string
+	ManifestURL           string
 	DefaultSampleInterval int
-	RampupSensors bool
-	PublisherList []string
+	RampupSensors         bool
+	PublisherList         []string
 }

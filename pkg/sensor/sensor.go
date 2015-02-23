@@ -16,10 +16,10 @@ type Measurement struct {
 // Sensor is capable of repeatedly measuring a given Target
 // with a specific Sampler, and returns those results over channel C.
 type Sensor struct {
-	Target   sampler.Target
-	C        chan Measurement
-	Sampler  sampler.Sampler
-	StopChan chan int
+	Target    sampler.Target
+	C         chan Measurement
+	Sampler   sampler.Sampler
+	StopChan  chan int
 	IsStopped chan bool
 }
 
@@ -48,7 +48,7 @@ func (s *Sensor) Start(interval int, delay float64) {
 	for {
 		<-t.C
 		select {
-		case <- s.StopChan:
+		case <-s.StopChan:
 			s.IsStopped <- true
 			return
 		default:
