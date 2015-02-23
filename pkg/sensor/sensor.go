@@ -46,11 +46,12 @@ func (s *Sensor) Start(interval int, delay float64) {
 	s.C <- s.measure()
 
 	for {
+		<-t.C
 		select {
 		case <- s.StopChan:
 			s.IsStopped <- true
 			return
-		case <-t.C:
+		default:
 			s.C <- s.measure()
 		}
 	}
