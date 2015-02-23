@@ -7,17 +7,17 @@ import (
 	"syscall"
 
 	"github.com/canaryio/canary/pkg/libratopublisher"
-	"github.com/canaryio/canary/pkg/sampler"
 	"github.com/canaryio/canary/pkg/manifest"
+	"github.com/canaryio/canary/pkg/sampler"
 	"github.com/canaryio/canary/pkg/sensor"
 	"github.com/canaryio/canary/pkg/stdoutpublisher"
 )
 
 type Canary struct {
-	Config   Config
-	Manifest manifest.Manifest
+	Config     Config
+	Manifest   manifest.Manifest
 	Publishers []Publisher
-	Sensors []sensor.Sensor
+	Sensors    []sensor.Sensor
 	OutputChan chan sensor.Measurement
 	ReloadChan chan bool
 }
@@ -49,7 +49,7 @@ func (c *Canary) SignalHandler() {
 			os.Exit(0)
 		case syscall.SIGHUP:
 			// Split reload logic into reloader() as to allow other things to trigger a manifest reload
-			c.ReloadChan<-true
+			c.ReloadChan <- true
 		}
 	}
 }
@@ -62,11 +62,11 @@ func (c *Canary) reloader() {
 	for r := range c.ReloadChan {
 		if r {
 			// stop all running sensors
-			for _,sensor := range c.Sensors {
+			for _, sensor := range c.Sensors {
 				sensor.Stop()
 			}
-			for _,sensor := range c.Sensors {
-				<- sensor.IsStopped
+			for _, sensor := range c.Sensors {
+				<-sensor.IsStopped
 			}
 
 			// get an updated manifest.
@@ -108,7 +108,7 @@ func (c *Canary) startSensors() {
 	// spinup a sensor for each target
 	for index, target := range c.Manifest.Targets {
 		// Determine whether to use target.Interval or conf.DefaultSampleInterval
-		var interval int;
+		var interval int
 		// Targets that lack an interval value in JSON will have their value set to zero. in this case,
 		// use the DefaultSampleInterval
 		if target.Interval == 0 {
