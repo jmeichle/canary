@@ -14,6 +14,7 @@ import (
 	"github.com/canaryio/canary/pkg/libratopublisher"
 	"github.com/canaryio/canary/pkg/manifest"
 	"github.com/canaryio/canary/pkg/stdoutpublisher"
+	"github.com/canaryio/canary/pkg/kinesispublisher"
 )
 
 // builds the app configuration via ENV
@@ -88,6 +89,8 @@ func createPublishers() (publishers []canary.Publisher) {
 				log.Fatal(err)
 			}
 			publishers = append(publishers, p)
+		case "kinesis":
+			publishers = append(publishers, canarykinesispublisher.New())
 		default:
 			log.Fatalf("Unknown publisher: %s", publisher)
 		}
