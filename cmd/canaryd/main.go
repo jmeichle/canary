@@ -90,7 +90,11 @@ func createPublishers() (publishers []canary.Publisher) {
 			}
 			publishers = append(publishers, p)
 		case "kinesis":
-			publishers = append(publishers, canarykinesispublisher.New())
+			p, err := canarykinesispublisher.NewFromEnv()
+			if err != nil {
+				log.Fatal(err)
+			}
+			publishers = append(publishers, p)
 		default:
 			log.Fatalf("Unknown publisher: %s", publisher)
 		}
